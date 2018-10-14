@@ -17,6 +17,7 @@
 
 // Global variables
 
+
 int ROWS;
 int COLS;
 int m1NonZeroEntries;
@@ -53,9 +54,11 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 		printf("Row: %d, Column : %d, Value: %f \n", 
 		matrix[lineNumber].row, matrix[lineNumber].col, matrix[lineNumber].value);
 
+
 		lineNumber++;
 	}
 }
+
 
 void printArray(float array[ROWS][ROWS]) {
 	for (int i = 0; i < ROWS; i++) 
