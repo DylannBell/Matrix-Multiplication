@@ -63,8 +63,8 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 
 	while (fgets(line, sizeof line, fp) != NULL)
 	{	
-		matrix[lineNumber].row = atof(strtok(line, " "))- 1;
-		matrix[lineNumber].col = atof(strtok(NULL, " ")) -1;
+		matrix[lineNumber].row = atof(strtok(line, " "));
+		matrix[lineNumber].col = atof(strtok(NULL, " ")) ;
 		matrix[lineNumber].value = atof(strtok(NULL, " "));
 		lineNumber++;
 	}
@@ -91,37 +91,69 @@ void printMatrixMarketArray(float matrix[resultRows][3]) {
 */
 void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
 
+	for(int i = 0; i < m1Rows; i++)
+	{
+		//printf("r: %d c: %d v: %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].value);
+	}
+
 	//Create result matrix and initialise to 0.
 	//HOW ARE WE MEANT TO KNOW WHAT THIS IS GOING TO BE BEFOREHAND?
 	//DYNAMICALLY ALLOCATE?
-	int ROWS = 3;
+	int ROWS = 10;
 	int COLS = 3;
-	resultRows = 3;
+	resultRows = 10;
 	float result[ROWS][COLS];
 	memset(result, 0.0, sizeof result);
-
+	
 	// For each non zero entry in the first matrix.
 	// Find entries such that m1Row = m2Col
 	// Multiply result and add to result matrix
 	// For parallelisation split up m1 by rows and send matching cols of m2?
+
+	//keeps track of the current row of m1 we are processing - whenever it changes, it means it's time to add the information to the result matrix
+	int currentRowCol = matrix1[0].row;
+	//keeps track of how many rows are in the result matrix
+	int resultNonZeroEntries = 0;
+	//maintains the value of the dot product
+	float dotProductValue = 0;
+
 	for (int i = 0; i < m1Rows; i++)
 	{  
-		//printf("FIRST LOOP - Row : %d Col : %d Val : %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].value);
-		for (int j = 0; j < m2Rows; j ++) 
+
+		printf("I => %f\n",matrix1[i].value);
+
+		for(int j = 0; j < m2Rows; j++)
 		{
-			//printf("SECOND LOOP - Row : %d Col : %d Val : %f \n", matrix2[j].row, matrix2[j].col, matrix2[j].value);
-			if (matrix1[i].col == matrix2[j].row) 
+			//if we've now gone to a new row on m1...add the results to the array and start again
+			if(currentRowCol != matrix1[i].row)
 			{
-				int m1Row = matrix1[i].row;
-				int m2Col = matrix2[j].col;
-				float m1Val = matrix1[i].value;
-				float m2Val = matrix2[j].value;
-				result[m1Row][m2Col] += m1Val * m2Val;
+				//add the results to the result arry
+				result[resultNonZeroEntries][0] = (float)i;
+				result[resultNonZeroEntries][1] = (float)(j);
+				result[resultNonZeroEntries][2] = (float)dotProductValue;
+
+				printf("%f %f %f \n", result[resultNonZeroEntries][0], result[resultNonZeroEntries][1],result[resultNonZeroEntries][2]);
+
+				resultNonZeroEntries++;
+
+				//reset the cumulative value of the row/column
+				dotProductValue = 0;
+
+				//reset the currentRowColValue
+				currentRowCol = matrix1[i].row;
 			}
+			
+			if(matrix1[i].row == matrix2[j].col && matrix1[i].col == matrix2[i].row)
+			{
+				dotProductValue = matrix1[i].value * matrix2[i].value;
+				printf("DOT PRODUCT VALUE : %f at %d %d \n", dotProductValue, i+1, j+1);
+			}
+			
 		}
+		
 	}
 
-	printMatrixMarketArray(result);
+	// /printMatrixMarketArray(result);
 	
 	
 }
