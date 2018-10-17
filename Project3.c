@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define MAX_SIZE 1000
 /*
-	COMPILE : gcc -std=c99 -o Project3 Project3.c [fileName1] [fileName2] [fileSize1] [fileSize2]
-	RUN [LINUX] : ./Project3.c test1.mtx test1.mtx
-	RUN [WINDOWS] : Project3.c test1.mtx test1.mtx
-	BOTH MATRIX FILES MUST BE ORDERED BY ROWS
+	COMPILE : gcc -std=c99 -o Project3 Project3.c
+	RUN [LINUX] : ./Project3 test1.mtx test1.mtx
+	RUN [WINDOWS] : Project3 test1.mtx test1.mtx
 */
 
 
@@ -66,6 +66,10 @@ void printArray(float array[ROWS][ROWS]) {
 }
 
 
+/*
+	matrix1 - 
+	matrix2 - 	
+*/
 void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2) {
 
 	int m1NonZeroEntries = 4;
@@ -101,13 +105,38 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2) {
 	printArray(result);
 }
 
+/*
+	From a given file name returns the number of lines within that file
+	file - the file name as a string
+	return - the number of lines within the specified file
+*/
+int countLines(char *file)
+{
+	printf("%s \n", file);
+
+	FILE *fp = fopen(file, "r");
+	char line[MAX_SIZE];
+
+	if(fp == NULL){
+		fprintf(stderr, "Error: cannot open file");
+		exit(EXIT_FAILURE);
+	}
+
+	int numLines = 0;
+
+    while(fgets(line, sizeof(line), fp) != NULL){
+        numLines++;
+    }
+
+    return numLines;
+}
 
 void main(int argc, char *argv[])
 {
 	//if the number of arguments is less than 3 - throw an error
-	if(argc < 5)
+	if(argc < 3)
 	{
-		printf("Error: you have not specified two files");
+		fprintf(stderr, "Error: you have not specified two files");
 		exit(EXIT_FAILURE);
 	}
 		
@@ -115,8 +144,15 @@ void main(int argc, char *argv[])
 	char *file1 = argv[1];
 	char *file2 = argv[2];
 	
-	//initialise an array - [Number of Rows] [Number of Cols]
+	
+	int m1NonZeroEntries = countLines(file1);
+	int m2NonZeroEntries = countLines(file2);
 
+	printf("m1NonZeroEntries : %d \n", m1NonZeroEntries);
+	printf("m2NonZeroEntries : %d \n", m2NonZeroEntries);
+
+	//initialise an array - [Number of Rows] [Number of Cols]
+/*
 
 	ROWS = atoi(argv[3]);
 	COLS = atoi(argv[4]);
@@ -144,7 +180,7 @@ void main(int argc, char *argv[])
 	fclose(fp2);
 
 	sequentialMultiply(matrix1, matrix2);
-
+*/
 
 	//https://www.geeksforgeeks.org/operations-sparse-matrices/
 	//https://people.eecs.berkeley.edu/~aydin/spgemm_sisc12.pdf
