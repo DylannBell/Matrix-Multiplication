@@ -15,7 +15,6 @@ int COLS;
 int m1NonZeroEntries;
 int m2NonZeroEntries;
 
-
 struct SparseRow {
 	int row;
 	int col;
@@ -83,7 +82,6 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2) {
 	// For each non zero entry in the first matrix.
 	// Find entries such that m1Row = m2Col
 	// Multiply result and add to result matrix
-
 	// For parallelisation split up m1 by rows and send matching cols of m2?
 
 	for (int i = 0; i < m1NonZeroEntries; i++)
