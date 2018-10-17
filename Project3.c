@@ -3,21 +3,13 @@
 #include <string.h>
 /*
 	COMPILE : gcc -std=c99 -o Project3 Project3.c [fileName1] [fileName2] [fileSize1] [fileSize2]
-	RUN [LINUX] : ./Project3.c test1.mtx test1.mtx 3 3
-	RUN [WINDOWS] : Project3.c test1.mtx test1.mtx 3 3
+	RUN [LINUX] : ./Project3.c test1.mtx test1.mtx
+	RUN [WINDOWS] : Project3.c test1.mtx test1.mtx
 	BOTH MATRIX FILES MUST BE ORDERED BY ROWS
 */
 
-/*
-	From a given file, stores each line into a 2-Dimensional matrix
-	fp - a file pointer to the relevant file
-	noOfRows - the number of rows in the file, computed elsewhere
-	return - a 2D matrix with all the information from the file
-*/
 
 // Global variables
-
-
 int ROWS;
 int COLS;
 int m1NonZeroEntries;
@@ -30,7 +22,10 @@ struct SparseRow {
 	float value;
 };
 
-
+/*
+	From a given file, stores each line into a matrix of structs
+	fp - a file pointer to the relevant file
+*/
 void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 {
 	//if you can't open the file - throw an error
@@ -46,20 +41,20 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 
 	while (fgets(line, sizeof line, fp) != NULL)
 	{	
-		// -1 because of index starting with 0 in C
 		matrix[lineNumber].row = atoi(strtok(line, " "))-1;
 		matrix[lineNumber].col = atoi(strtok(NULL, " "))-1;
 		matrix[lineNumber].value = atof(strtok(NULL, " "));
 		
-		printf("Row: %d, Column : %d, Value: %f \n", 
-		matrix[lineNumber].row, matrix[lineNumber].col, matrix[lineNumber].value);
-
+		printf("Row: %d, Column : %d, Value: %f \n", matrix[lineNumber].row, matrix[lineNumber].col, matrix[lineNumber].value);
 
 		lineNumber++;
 	}
 }
 
 
+/*
+	Prints a given array to stdout
+*/
 void printArray(float array[ROWS][ROWS]) {
 	for (int i = 0; i < ROWS; i++) 
 	{
@@ -123,6 +118,8 @@ void main(int argc, char *argv[])
 	char *file2 = argv[2];
 	
 	//initialise an array - [Number of Rows] [Number of Cols]
+
+
 	ROWS = atoi(argv[3]);
 	COLS = atoi(argv[4]);
 
