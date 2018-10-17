@@ -91,6 +91,11 @@ void printMatrixMarketArray(float matrix[resultRows][3]) {
 */
 void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
 
+	for(int i = 0; i < m1Rows; i++)
+	{
+		printf("%i %i %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].value);
+	}
+
 	int ROWS = 3;
 	int COLS = 3;
 	resultRows = 3;
@@ -102,34 +107,40 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 	int curResultCol = matrix2[0].col;
 	int resultNonZeroEntries = 0;
 
-	for(int i = 0; i < m1Rows; i++)
+	for(int i = 0; i <= m1Rows; i++)
 	{
 		int curM1Row = matrix1[i].row;
 		int curM1Col = matrix1[i].col;
 		float curM1Value = matrix1[i].value;
 
-		if(curM1Row != curResultRow)
+		printf("Current M1 : %i %i %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].value);
+
+		if(curM1Row != curResultRow && dotProduct != 0)
 		{
+			printf("Changing From %d to %d \n", curResultRow, curM1Row);
+			printf("Add to results: : %f at %d %d \n", dotProduct, curResultRow, curResultCol);
 			result[resultNonZeroEntries][0] = (float)curResultRow;
 			result[resultNonZeroEntries][1] = (float)curResultCol;
 			result[resultNonZeroEntries][2] = dotProduct;
 
 			dotProduct = 0;
-			curResultRow = matrix1[i].row;
+			curResultRow = curM1Row;
 			resultNonZeroEntries++;
 		}
-
+		
 		for(int j = 0; j < m2Rows; j++)
 		{
-
 			int curM2Row = matrix2[j].row;
 			int curM2Col = matrix2[j].col;
 			float curM2Value = matrix2[j].value;
 
-			if((curM1Row == curM2Col) && (curM1Col == curM2Col))
+			if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			{
 				dotProduct += curM1Value*curM2Value;
 				curResultCol = curM2Col;
+				curResultRow = curM1Row;
+				printf("DOT PRODUCT VALUE : %f at %d %d %d %d \n", dotProduct, i, j, curResultRow, curResultCol);
+				break;
 			}
 
 		}
