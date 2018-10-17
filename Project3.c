@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define MAX_SIZE 1000
+
 /*
 	COMPILE : gcc -std=c99 -o Project3 Project3.c
 	RUN [LINUX] : ./Project3 test1.mtx test1.mtx
@@ -10,16 +11,38 @@
 
 
 // Global variables
-int ROWS;
-int COLS;
-int m1NonZeroEntries;
-int m2NonZeroEntries;
+int resultRows;
 
 struct SparseRow {
 	int row;
 	int col;
 	float value;
 };
+
+
+/*
+	From a given file name returns the number of lines within that file
+	file - the file name as a string
+	return - the number of lines within the specified file
+*/
+int countLines(char *file)
+{
+	FILE *fp = fopen(file, "r");
+	char line[MAX_SIZE];
+
+	if(fp == NULL){
+		fprintf(stderr, "Error: cannot open file");
+		exit(EXIT_FAILURE);
+	}
+
+	int numLines = 0;
+
+    while(fgets(line, sizeof(line), fp) != NULL){
+        numLines++;
+    }
+
+    return numLines;
+}
 
 /*
 	From a given file, stores each line into a matrix of structs
@@ -40,58 +63,53 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 
 	while (fgets(line, sizeof line, fp) != NULL)
 	{	
-		matrix[lineNumber].row = atoi(strtok(line, " "))-1;
-		matrix[lineNumber].col = atoi(strtok(NULL, " "))-1;
+		matrix[lineNumber].row = atof(strtok(line, " "))- 1;
+		matrix[lineNumber].col = atof(strtok(NULL, " ")) -1;
 		matrix[lineNumber].value = atof(strtok(NULL, " "));
-		
-		printf("Row: %d, Column : %d, Value: %f \n", matrix[lineNumber].row, matrix[lineNumber].col, matrix[lineNumber].value);
-
 		lineNumber++;
 	}
+
 }
 
-
 /*
-	Prints a given array to stdout
+	Prints a given array in matrix market format to stdout
 */
-void printArray(float array[ROWS][ROWS]) {
-	for (int i = 0; i < ROWS; i++) 
+void printMatrixMarketArray(float matrix[resultRows][3]) {
+
+	for (int i = 0; i < resultRows; i++)
 	{
-		for (int j = 0; j < COLS; j++) 
-		{
-			printf("%f ", array[i][j]);
-		}
+		printf("%d ", matrix[i][0]);
+		printf("%d ", matrix[i][1]);
+		printf("%f ", matrix[i][2]);
 		printf("\n");
 	}
 }
-
 
 /*
 	matrix1 - 
 	matrix2 - 	
 */
-void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2) {
-
-	int m1NonZeroEntries = 4;
-	int m2NonZeroEntries = 4;
-
-	ROWS = 3;
-	COLS = 3;
+void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
 
 	//Create result matrix and initialise to 0.
+	//HOW ARE WE MEANT TO KNOW WHAT THIS IS GOING TO BE BEFOREHAND?
+	//DYNAMICALLY ALLOCATE?
+	int ROWS = 3;
+	int COLS = 3;
+	resultRows = 3;
 	float result[ROWS][COLS];
 	memset(result, 0.0, sizeof result);
-
 
 	// For each non zero entry in the first matrix.
 	// Find entries such that m1Row = m2Col
 	// Multiply result and add to result matrix
 	// For parallelisation split up m1 by rows and send matching cols of m2?
-
-	for (int i = 0; i < m1NonZeroEntries; i++)
+	for (int i = 0; i < m1Rows; i++)
 	{  
-		for (int j = 0; j < m2NonZeroEntries; j ++) 
+		//printf("FIRST LOOP - Row : %d Col : %d Val : %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].value);
+		for (int j = 0; j < m2Rows; j ++) 
 		{
+			//printf("SECOND LOOP - Row : %d Col : %d Val : %f \n", matrix2[j].row, matrix2[j].col, matrix2[j].value);
 			if (matrix1[i].col == matrix2[j].row) 
 			{
 				int m1Row = matrix1[i].row;
@@ -102,33 +120,10 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2) {
 			}
 		}
 	}
-	printArray(result);
-}
 
-/*
-	From a given file name returns the number of lines within that file
-	file - the file name as a string
-	return - the number of lines within the specified file
-*/
-int countLines(char *file)
-{
-	printf("%s \n", file);
-
-	FILE *fp = fopen(file, "r");
-	char line[MAX_SIZE];
-
-	if(fp == NULL){
-		fprintf(stderr, "Error: cannot open file");
-		exit(EXIT_FAILURE);
-	}
-
-	int numLines = 0;
-
-    while(fgets(line, sizeof(line), fp) != NULL){
-        numLines++;
-    }
-
-    return numLines;
+	printMatrixMarketArray(result);
+	
+	
 }
 
 void main(int argc, char *argv[])
@@ -144,28 +139,13 @@ void main(int argc, char *argv[])
 	char *file1 = argv[1];
 	char *file2 = argv[2];
 	
-	
 	int m1NonZeroEntries = countLines(file1);
 	int m2NonZeroEntries = countLines(file2);
-
-	printf("m1NonZeroEntries : %d \n", m1NonZeroEntries);
-	printf("m2NonZeroEntries : %d \n", m2NonZeroEntries);
-
-	//initialise an array - [Number of Rows] [Number of Cols]
-/*
-
-	ROWS = atoi(argv[3]);
-	COLS = atoi(argv[4]);
-
 	
 	//open the files using fopen...
 	FILE *fp1 = fopen (file1, "r");
 	FILE *fp2 = fopen(file2, "r");
 	
-	// Create structs to hold sparse matrix
-	m1NonZeroEntries = 4;
-	m2NonZeroEntries = 4;
-
 	// Create the array to hold the structs
 	struct SparseRow matrix1[m1NonZeroEntries];
 	struct SparseRow matrix2[m2NonZeroEntries];
@@ -174,13 +154,13 @@ void main(int argc, char *argv[])
 	fileToMatrix(fp1, matrix1);
 	fileToMatrix(fp2, matrix2);	
 	
+	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
 
 	//close both files
 	fclose(fp1);
 	fclose(fp2);
 
-	sequentialMultiply(matrix1, matrix2);
-*/
+	
 
 	//https://www.geeksforgeeks.org/operations-sparse-matrices/
 	//https://people.eecs.berkeley.edu/~aydin/spgemm_sisc12.pdf
