@@ -12,7 +12,6 @@
 
 // Global variables
 int ROWS;
-int COLS;
 
 struct SparseRow {
 	int row;
@@ -75,13 +74,14 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 /*
 	Prints a given array in matrix market format to stdout
 */
-void printMatrixMarketArray(float matrix[ROWS][COLS]) {
+void printMatrixMarketArray(struct SparseRow *matrix) {
 
+	printf("RESULT MATRIX\n");
 	for (int i = 0; i < ROWS; i++)
 	{
-		printf("%f ", matrix[i][0]);
-		printf("%f ", matrix[i][1]);
-		printf("%f ", matrix[i][2]);
+		printf("%i ", matrix[i].row);
+		printf("%i ", matrix[i].col);
+		printf("%f ", matrix[i].val);
 		printf("\n");
 	}
 }
@@ -107,14 +107,11 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 	printf("\n");
 
 
-	//this shouldn't be hard coded....
+	//this "ROWS" variable shouldn't be hardcoded...
 	ROWS = 2;
-	COLS = 3;
-	
-	float result[ROWS][COLS];
-	memset(result, 0.0, sizeof result);
+	struct SparseRow result[ROWS];
 
-	//matrix multiplication with dot product...
+	//matrix multiplication with dot product
 	int resultNonZeroEntries = 0;
 	for(int i = 0; i < m1Rows; i++)
 	{
@@ -130,9 +127,9 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 
 			if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			{
-				result[resultNonZeroEntries][0] = (float)curM1Row;
-				result[resultNonZeroEntries][1] = (float)curM2Col;
-				result[resultNonZeroEntries][2] += curM1Value*curM2Value;
+				result[resultNonZeroEntries].row = curM1Row;
+				result[resultNonZeroEntries].col = curM2Col;
+				result[resultNonZeroEntries].val += curM1Value*curM2Value;
 				resultNonZeroEntries++;
 				break;
 			}
