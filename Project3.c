@@ -105,6 +105,10 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 	}
 	printf("\n");
 
+	//http://www.mathcs.emory.edu/~cheung/Courses/561/Syllabus/3-C/sparse.html
+	//look at Dylan's code...
+
+	/*
 
 	int ROWS = 3;
 	int COLS = 3;
@@ -150,8 +154,11 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 
 		}
 	}
+	*/
 
-	printMatrixMarketArray(result);
+
+
+	//printMatrixMarketArray(result);
 }
 
 void main(int argc, char *argv[])
@@ -170,6 +177,11 @@ void main(int argc, char *argv[])
 	int m1NonZeroEntries = countLines(file1);
 	int m2NonZeroEntries = countLines(file2);
 	
+	//sort the files using execv() and 
+	//sort -k1 -n m1.mtx > out
+	//sort -k2 -n m2.mtx > out
+
+
 	//open the files using fopen...
 	FILE *fp1 = fopen (file1, "r");
 	FILE *fp2 = fopen(file2, "r");
