@@ -191,6 +191,10 @@ void main(int argc, char *argv[])
 	
 	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
 
+	//free any pointers which have used malloc
+	free(sortM1);
+	free(sortM2);
+
 	//close both files
 	fclose(fp1);
 	fclose(fp2);
