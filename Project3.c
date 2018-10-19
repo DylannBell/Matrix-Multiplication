@@ -108,6 +108,9 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 	//http://www.mathcs.emory.edu/~cheung/Courses/561/Syllabus/3-C/sparse.html
 	//look at Dylan's code...
 
+	//there's a lot simpler way to doing this!
+	//Need to sort out global variables etc....
+
 	/*
 
 	int ROWS = 3;
@@ -180,7 +183,6 @@ void main(int argc, char *argv[])
 	//sort the files using execv() and 
 	//sort -k1 -n m1.mtx > out
 	//sort -k2 -n m2.mtx > out
-
 
 	//open the files using fopen...
 	FILE *fp1 = fopen (file1, "r");
