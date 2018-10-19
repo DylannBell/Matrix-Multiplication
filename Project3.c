@@ -180,13 +180,30 @@ void main(int argc, char *argv[])
 	int m1NonZeroEntries = countLines(file1);
 	int m2NonZeroEntries = countLines(file2);
 	
-	//sort the files using execv() and 
-	//sort -k1 -n m1.mtx > out
-	//sort -k2 -n m2.mtx > out
+	//sort the files using system()
+	//sort -k1 -n test1.mtx > out
+	//sort -k2 -n test2.mtx > out
+	char *sortStart1 = "sort -k1 -n ";
+	char *sortStart2 = "sort -k2 -n ";
+	char *sortEnd1 = " > m1.mtx";
+	char *sortEnd2 = " > m2.mtx";
+
+	char *sortM1 = malloc(strlen(sortStart1) + strlen(file1) + strlen(sortEnd1) + 1);
+	strcpy(sortM1, sortStart1);
+	strcat(sortM1, file1);
+	strcat(sortM1, sortEnd1);
+
+	char *sortM2 = malloc(strlen(sortStart2) + strlen(file2) + strlen(sortEnd2) + 1);
+	strcpy(sortM2, sortStart2);
+	strcat(sortM2, file2);
+	strcat(sortM2, sortEnd2);
+
+	system(sortM1);
+	system(sortM2);
 
 	//open the files using fopen...
-	FILE *fp1 = fopen (file1, "r");
-	FILE *fp2 = fopen(file2, "r");
+	FILE *fp1 = fopen ("m1.mtx", "r");
+	FILE *fp2 = fopen("m2.mtx", "r");
 	
 	// Create the array to hold the structs
 	struct SparseRow matrix1[m1NonZeroEntries];
@@ -197,6 +214,7 @@ void main(int argc, char *argv[])
 	fileToMatrix(fp2, matrix2);	
 	
 	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
+
 
 	//close both files
 	fclose(fp1);
