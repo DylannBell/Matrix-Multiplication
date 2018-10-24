@@ -108,7 +108,7 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 
 
 	//this "ROWS" variable shouldn't be hardcoded...
-	ROWS = 2;
+	ROWS = 2000000;
 	struct SparseRow result[ROWS];
 
 	//matrix multiplication with dot product
