@@ -131,7 +131,7 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 				{
 					*result = realloc(*result, (sizeof(struct SparseRow)*(resultNonZeroEntries+1)));
 				}
-				
+
 				(*result)[resultNonZeroEntries].row = curM1Row;
 				(*result)[resultNonZeroEntries].col = curM2Col;
 				(*result)[resultNonZeroEntries].val += curM1Value*curM2Value;
