@@ -13,12 +13,11 @@
 // Global variables
 int ROWS;
 
-struct SparseRow {
+struct SparseRow{
 	int row;
 	int col;
 	float val;
 };
-
 
 /*
 	From a given file name returns the number of lines within that file
@@ -90,8 +89,8 @@ void printMatrixMarketArray(struct SparseRow *matrix) {
 	matrix1 - 
 	matrix2 - 	
 */
-void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
-
+void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
+	
 	printf("MATRIX 1 \n");
 	for(int i = 0; i < m1Rows; i++)
 	{
@@ -105,11 +104,11 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 		printf("%i %i %f \n", matrix2[i].row, matrix2[i].col, matrix2[i].val);
 	}
 	printf("\n");
-
+	
 
 	//this "ROWS" variable shouldn't be hardcoded...
-	ROWS = 2000000;
-	struct SparseRow result[ROWS];
+	ROWS = 5;
+	*result = malloc(1 * sizeof(struct SparseRow));
 
 	//matrix multiplication with dot product
 	int resultNonZeroEntries = 0;
@@ -127,17 +126,31 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 
 			if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			{
-				result[resultNonZeroEntries].row = curM1Row;
-				result[resultNonZeroEntries].col = curM2Col;
-				result[resultNonZeroEntries].val += curM1Value*curM2Value;
+
+				if(resultNonZeroEntries!= 0)
+				{
+					*result = realloc(*result, (sizeof(struct SparseRow)*(resultNonZeroEntries+1)));
+				}
+				
+				(*result)[resultNonZeroEntries].row = curM1Row;
+				(*result)[resultNonZeroEntries].col = curM2Col;
+				(*result)[resultNonZeroEntries].val += curM1Value*curM2Value;
 				resultNonZeroEntries++;
 				break;
 			}
 
 		}
 	}
-		
-	printMatrixMarketArray(result);
+
+	printf("RESULT MATRIX\n");
+	for (int i = 0; i < resultNonZeroEntries; i++)
+	{
+		printf("%d ", (*result)[i].row);
+		printf("%d ", (*result)[i].col);
+		printf("%f ", (*result)[i].val);
+		printf("\n");
+	}
+
 }
 
 void main(int argc, char *argv[])
@@ -189,7 +202,8 @@ void main(int argc, char *argv[])
 	fileToMatrix(fp1, matrix1);
 	fileToMatrix(fp2, matrix2);	
 	
-	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
+	struct SparseRow *result = NULL;
+	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
 
 	//free any pointers which have used malloc
 	free(sortM1);
