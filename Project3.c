@@ -89,7 +89,7 @@ void printMatrixMarketArray(struct SparseRow *matrix) {
 void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
 	
 	// Don't think this will work if NZE < numWorkers
-	int numWorkers = 5;
+	int numWorkers = 11;
 	int averageRow = m1Rows / numWorkers;
 	int counter = 0;
 	int currentRow;
@@ -131,7 +131,7 @@ void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1R
 	}
 
 
-	/*
+	
 	// Print offset values
 	for (int i = 0; i < numWorkers; i++) {
 		printf("Offset row = %d\n", offsetRow[i]);
@@ -139,7 +139,7 @@ void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1R
 	for (int i = 0; i < numWorkers; i++) {
 		printf("Offset col = %d\n", offsetCol[i]);
 	}
-	*/
+	
 
 }
 
