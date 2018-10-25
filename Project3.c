@@ -183,7 +183,8 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 			int curM2Col = matrix2[j].col;
 			float curM2Value = matrix2[j].val;
 
-			if((curM1Row == curM2Col) && (curM1Col == curM2Row))
+			//if((curM1Row == curM2Col) && (curM1Col == curM2Row))
+			if(curM1Col == curM2Row)
 			{
 
 				if(resultNonZeroEntries!= 0)
@@ -260,11 +261,11 @@ void main(int argc, char *argv[])
 	// Load the file into the matrix
 	fileToMatrix(fp1, matrix1);
 	fileToMatrix(fp2, matrix2);	
-	
-	splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
 
-	//struct SparseRow *result = NULL;
-	//sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
+	//splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
+
+	struct SparseRow *result = NULL;
+	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
 
 	//free any pointers which have used malloc
 	free(sortM1);
