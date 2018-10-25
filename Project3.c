@@ -85,6 +85,65 @@ void printMatrixMarketArray(struct SparseRow *matrix) {
 	}
 }
 
+
+void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
+	
+	// Don't think this will work if NZE < numWorkers
+	int numWorkers = 5;
+	int averageRow = m1Rows / numWorkers;
+	int counter = 0;
+	int currentRow;
+	int currentCol;
+
+	int offsetRowValue[numWorkers];
+	int offsetRow[numWorkers];
+	int offsetCol[numWorkers];
+
+	for (int i = 1; i <= m1Rows; i++) {
+		currentRow = matrix1[i].row;
+		if (i % averageRow == 0) {
+			offsetRowValue[counter] = currentRow;
+			counter++;
+		}
+	}
+
+	counter = 0;
+	for (int i = 0; i < m1Rows; i++) {
+		currentRow = matrix1[i].row;
+		if (currentRow <= offsetRowValue[counter]) {
+			offsetRow[counter] = i;
+		} else {
+			counter++;
+			offsetRow[counter+1] = i;
+		}
+	}
+
+	
+	counter = 0;
+	for (int i = 0; i < m2Rows; i++) {
+		currentCol = matrix2[i].col;
+		if (currentCol <= offsetRowValue[counter]) {
+			offsetCol[counter] = i;
+		} else {
+			counter++;
+			offsetCol[counter+1] = i;
+		}
+	}
+
+
+	/*
+	// Print offset values
+	for (int i = 0; i < numWorkers; i++) {
+		printf("Offset row = %d\n", offsetRow[i]);
+	}
+	for (int i = 0; i < numWorkers; i++) {
+		printf("Offset col = %d\n", offsetCol[i]);
+	}
+	*/
+
+}
+
+
 /*
 	matrix1 - 
 	matrix2 - 	
@@ -202,8 +261,10 @@ void main(int argc, char *argv[])
 	fileToMatrix(fp1, matrix1);
 	fileToMatrix(fp2, matrix2);	
 	
-	struct SparseRow *result = NULL;
-	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
+	splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
+
+	//struct SparseRow *result = NULL;
+	//sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
 
 	//free any pointers which have used malloc
 	free(sortM1);
