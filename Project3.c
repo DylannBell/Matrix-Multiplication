@@ -12,6 +12,8 @@
 
 // Global variables
 int ROWS;
+int* offsetRowArray;
+int* offsetColArray;
 
 struct SparseRow{
 	int row;
@@ -86,68 +88,64 @@ void printMatrixMarketArray(struct SparseRow *matrix) {
 }
 
 
-void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
-	
-	//[0,10,20,30,40]
-	//0 -> 9
-	//10 -> 19
-	//20 -> 29
-	//29 -> 39
+void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1NonZeroEntries, int m2NonZeroEntries) {
 
-	//define the number of workers
 	int numWorkers = 11;
 
-	//find the average number of rows
-	int averageRow = m1Rows / numWorkers;
+	int currentRow;
+	int currentCol;
+	int averageRow = m1NonZeroEntries / numWorkers;
+	int i;
+	int counter;
 
-	//initalise an array with a size of numWorkers + 1 to account for 0 at start of array
-	int rowPartitions[numWorkers];
-	rowPartitions[0] = 0;
+	// Arrays
+	int offsetValue[numWorkers];
+	int indexArray[numWorkers];
 
-	//populate this array with the partition boundaries dictated by number of rows
-	int partition = averageRow;
-	for(int i = 1; i < numWorkers; i++) {
-		rowPartitions[i] = partition;
-		partition += averageRow;
-	}
+	offsetRowArray = malloc((numWorkers) * sizeof(offsetRowArray));
+	offsetColArray = malloc((numWorkers) * sizeof(offsetRowArray));
 
-	//for each element in the array
-	for(int i = 0; i < numWorkers; i++) {
+	counter = 0;
+	int lastRow = -1;
 
-		int curRow = matrix1[i].row;
-		int nextRow = matrix1[i+1].row;
-		int nextRowIndex = i + 1;
-
-		//"peek" ahead
-		if(nextRowIndex == numWorkers) {
-			continue;
-		}
-		else{
-			//if the integer after doesn't change
-			if(curRow == nextRow) {
-				continue;
-			}
-			//if the integer after DOES change
-			else {
-
-				//loop through and increment the indexes indicating the edited number of partition boundaries
-				while(curRow == matrix1[nextRowIndex].row) {
-					rowPartitions[i] = rowPartitions[i] + 1;
-				}
-
-				//update the next boundaries
-			}
+	// ROW
+	for (i = 0; i < m1NonZeroEntries; i++) {
+		currentRow = matrix1[i].row;
+		if (currentRow == lastRow) {
+			offsetRowArray[counter-1] = i;
+			offsetValue[counter-1] = currentRow;
 
 		}
-
-	}	
-
-	for(int k = 0; k < numWorkers; k++) {
-		printf(" %d \n", rowPartitions[k]);
+		else if ((i+1) % averageRow == 0) {
+			lastRow = matrix1[i].row;
+			offsetRowArray[counter] = i;
+			offsetValue[counter] = currentRow;
+			counter++;
+		}
 	}
 
+	//COL
+	counter = 0;
+	for (i = 0; i < m2NonZeroEntries; i++) {
+		currentCol = matrix2[i].col;
+		currentRow = offsetValue[counter];
+		if (currentCol <= currentRow) {
+			offsetColArray[counter] = i;
+		} else {
+			counter++;
+			offsetColArray[counter] = i;
+		}
+	}
+
+
+	for (i = 0; i < numWorkers; i++) {
+		printf("Offset Row[%d] = %d\n", i, offsetRowArray[i]);
+		printf("Offset Col[%d] = %d\n", i, offsetColArray[i]);
+		printf("Value[%d] = %d\n", i, offsetValue[i]);
+	}
 
 }
+
 
 
 /*
