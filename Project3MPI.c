@@ -14,7 +14,7 @@
 int* offsetRowArray;
 int* offsetColArray;
 
-typedef struct SparseRow{
+typedef struct SparseRow {
 	int row;
 	int col;
 	float val;
@@ -26,8 +26,7 @@ typedef struct SparseRow{
 	file - the file name as a string
 	return - the number of lines within the specified file
 */
-int countLines(char *file)
-{
+int countLines(char *file) {
 	FILE *fp = fopen(file, "r");
 	char line[MAX_SIZE];
 
@@ -49,8 +48,7 @@ int countLines(char *file)
 	From a given file, stores each line into a matrix of structs
 	fp - a file pointer to the relevant file
 */
-void fileToMatrix(FILE *fp, struct SparseRow *matrix)
-{
+void fileToMatrix(FILE *fp, struct SparseRow *matrix) {
 	//if you can't open the file - throw an error
 	if(fp == NULL)
 	{
@@ -79,9 +77,7 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 	m2Rows - the number of rows matrix2 contains
 	result - the matrix which contains the result of the matrix multiplication
 */
-int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) 
-{
-
+int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
 
 	*result = malloc(1 * sizeof(struct SparseRow));
 
@@ -189,6 +185,7 @@ void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1N
 int main (int argc, char *argv[]) {
 
 	//ASSUMPTION : the number of unique numbered rows is greater then the number of workers
+	
 	int i, //loop index
 	numWorkers, // records the number of workers in the environment
 	numtasks, // number of tasks in partition
@@ -295,71 +292,91 @@ int main (int argc, char *argv[]) {
 
 		// plit matrix1 by rows and matrix2 by corresponding cols
 		splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, numWorkers);
-
-		printf("OFFSET ROWS : \n");
-		for(i = 0; i < numWorkers; i++) {
-			printf("%d ", offsetRowArray[i]);
-		}
-		printf("\n");
-
-		printf("OFFSET COLS: \n");
-		for(i = 0; i < numWorkers; i++) {
-			printf("%d ", offsetColArray[i]);
-		}
-		printf("\n");
-
-		/*
+		
 		//sending data to worker nodes
 		mtype = FROM_MASTER;
 		int rowsToSend;
 
-		//for each worker ..
+		//for each worker node we know within the environment
 		for(dest = 1; dest <= numWorkers; dest++)
 		{
+			//partition the data based on row and column
+			int sizeOfPartitionRow = 0;
+			int sizeOfPartitionCol = 0;
+			int partitionRowIndex = 0;
+			int partitionColIndex = 0;
+			int j = dest - 1;
 
-			if (dest == 1) {
-				m1Rows = offsetRowArray[0];
-				m2Rows = offsetColArray[0];
-			} else {
-				m1Rows = offsetRowArray[dest] - offsetRowArray[dest-1];
-				m2Rows = offsetColArray[dest] - offsetColArray[dest-1];
+			//determines the size of the partitions
+			if(j == 0) {
+				sizeOfPartitionRow = offsetRowArray[j] + 1;
+				sizeOfPartitionCol = offsetColArray[j] + 1;
+			} 
+			else if((j+1) == numWorkers) {
+				sizeOfPartitionRow = m1NonZeroEntries - offsetRowArray[j];
+				sizeOfPartitionCol = m2NonZeroEntries - offsetColArray[j];
+			}
+			else {
+				sizeOfPartitionRow = offsetRowArray[j] - offsetRowArray[j - 1];
+				sizeOfPartitionCol = offsetColArray[j] - offsetColArray[j - 1];
 			}
 
-			MPI_Send(&offsetRowArray[dest-1], 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-			MPI_Send(&offsetColArray[dest-1], 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-			MPI_Send(&m1Rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
-			MPI_Send(&m2Rows, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+			if((j+1) != numWorkers) {
+				partitionRowIndex = offsetRowArray[j] - sizeOfPartitionRow + 1;			
+				partitionColIndex = offsetColArray[j] - sizeOfPartitionCol + 1;				
+			}
+			else {
+				partitionRowIndex = offsetRowArray[j];
+				partitionColIndex = offsetColArray[j];
+			}
 
-			MPI_Send(&matrix1[offsetRowArray[dest-1]], m1Rows, mpi_struct, dest, mtype, MPI_COMM_WORLD);
-			MPI_Send(&matrix2[offsetColArray[dest-1]], m2Rows, mpi_struct, dest, mtype, MPI_COMM_WORLD);
+			/*
+			printf("----------------------------------\n");
+			printf("WORKER : %d\n", dest);
+			printf("Size Of Partition Row : %d\n", sizeOfPartitionRow);
+			printf("Starting Index Of Row : %d\n", partitionRowIndex);
+			printf("Size Of Partition Col : %d\n", sizeOfPartitionCol);
+			printf("Starting Index Of Col : %d\n", partitionColIndex);
+			*/
+			
+			//sending information to the workers
+			MPI_Send(&sizeOfPartitionRow, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+			MPI_Send(&sizeOfPartitionCol, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
+			MPI_Send(&matrix1[partitionRowIndex], sizeOfPartitionRow, mpi_struct, dest, mtype, MPI_COMM_WORLD);
+			MPI_Send(&matrix2[partitionColIndex], sizeOfPartitionCol, mpi_struct, dest, mtype, MPI_COMM_WORLD);
+			
 		}
-		*/
-
 	} 
-
-
-	int rowOffset;
-	int colOffset;
 
 	if (taskid > MASTER)
 	{
-		/*
 		mtype = FROM_MASTER;
-		MPI_Recv(&rowOffset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-		MPI_Recv(&colOffset, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-		MPI_Recv(&m1Rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
-		MPI_Recv(&m2Rows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+		int sizeOfPartitionRow;
+		int sizeOfPartitionCol;
+		
+		MPI_Recv(&sizeOfPartitionRow, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
+		MPI_Recv(&sizeOfPartitionCol, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
-		struct SparseRow matrix1Part[m1Rows];
-		struct SparseRow matrix2Part[m2Rows];
+		struct SparseRow matrix1Part[sizeOfPartitionRow];
+		struct SparseRow matrix2Part[sizeOfPartitionCol];
 
-		MPI_Recv(&matrix1Part, m1Rows, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
-		MPI_Recv(&matrix2Part, m2Rows, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
+		MPI_Recv(&matrix1Part, sizeOfPartitionRow, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
+		MPI_Recv(&matrix2Part, sizeOfPartitionCol, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
 
-		//printf("I am worker: %d\n", taskid);
-		//printf("M1 = %d %d %f \n", matrix1Part[0].row, matrix1Part[0].col, matrix1Part[0].val);
-		//printf("M2 = %d %d %f \n", matrix2Part[0].row, matrix2Part[0].col, matrix2Part[0].val);
+		/*
+		printf("----------------------------------\n");
+		printf("WORKER : %d\n", taskid);
+		printf("ROW PARTITION : \n");
+		for(i = 0; i < sizeOfPartitionRow; i++) {
+			printf("%d %d %f \n", matrix1Part[i].row, matrix1Part[i].col, matrix1Part[i].val);
+		}
+		printf("COL PARTITION : \n");
+		for(i = 0; i < sizeOfPartitionCol; i++) {
+			printf("%d %d %f \n", matrix2Part[i].row, matrix2Part[i].col, matrix2Part[i].val);
+		}
+		*/
 
+		/*
 		int resultRows;
 		struct SparseRow *result = NULL;
 		resultRows = sequentialMultiply(matrix1Part, matrix2Part, m1Rows, m2Rows, &result);
@@ -368,6 +385,7 @@ int main (int argc, char *argv[]) {
 			//printf("Result = %d %d %f\n", result[i].row, result[i].col, result[i].val);
 		}
 		*/
+		
 
 	}
 
