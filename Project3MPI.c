@@ -96,7 +96,6 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 	}
 	*/
 	
-
 	(*result[0]).row = 0;
 	(*result[0]).col = 0;
 	(*result[0]).val = 0;
@@ -353,7 +352,7 @@ int main (int argc, char *argv[]) {
 				partitionColIndex = offsetColArray[j];
 			}
 
-			/*			
+					
 			//DEBUGGING 
 			printf("----------------------------------\n");
 			printf("SENDING TO WORKER : %d\n", dest);
@@ -369,7 +368,7 @@ int main (int argc, char *argv[]) {
 			for(i = partitionColIndex; i < (partitionColIndex + sizeOfPartitionCol); i++) {
 				printf("%d %d %f \n", matrix2[i].row, matrix2[i].col, matrix2[i].val);
 			}	
-			*/		
+			
 			
 			//sending information to the workers
 			MPI_Send(&sizeOfPartitionRow, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -380,7 +379,6 @@ int main (int argc, char *argv[]) {
 
 		
 		//recieving data from worker nodes
-		/*
 		mtype = FROM_WORKER;
 		for(i = 1; i <= numWorkers; i++) {
 			
@@ -397,9 +395,8 @@ int main (int argc, char *argv[]) {
 			for(j = 0; j < resultRows; j++) {
 				printf("%d %d %f \n", result[j].row, result[j].col, result[j].val);
 			}
+
 		}
-		*/
-		
 
 	} 
 
@@ -435,7 +432,7 @@ int main (int argc, char *argv[]) {
 		struct SparseRow *result = malloc(1 * sizeof(struct SparseRow));
 		resultRows = sequentialMultiply(matrix1Part, matrix2Part, sizeOfPartitionRow, sizeOfPartitionCol, &result);
 
-		/*
+		/*		
 		printf("RESULT ROWS\n");
 		for(i = 0; i < resultRows; i++) {
 			printf("%d => %d %d %f \n", taskid, result[i].row, result[i].col, result[i].val);
@@ -443,11 +440,10 @@ int main (int argc, char *argv[]) {
 		*/
 		
 		mtype = FROM_WORKER;
-		MPI_Send(&result, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
-		MPI_Send(&result, resultRows, mpi_struct, MASTER, mtype, MPI_COMM_WORLD);
-
-		//free(result);
-
+		MPI_Send(&resultRows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
+		MPI_Send(&result[0], resultRows, mpi_struct, MASTER, mtype, MPI_COMM_WORLD);
+		free(result);
+		
 	}
 
 	MPI_Finalize();
