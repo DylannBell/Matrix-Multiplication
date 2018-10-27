@@ -88,58 +88,64 @@ void printMatrixMarketArray(struct SparseRow *matrix) {
 
 void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
 	
-	// Don't think this will work if NZE < numWorkers
+	//[0,10,20,30,40]
+	//0 -> 9
+	//10 -> 19
+	//20 -> 29
+	//29 -> 39
+
+	//define the number of workers
 	int numWorkers = 11;
+
+	//find the average number of rows
 	int averageRow = m1Rows / numWorkers;
-	int counter = 0;
-	int currentRow;
-	int currentCol;
 
-	int offsetRowValue[numWorkers];
-	int offsetRow[numWorkers];
-	int offsetCol[numWorkers];
+	//initalise an array with a size of numWorkers + 1 to account for 0 at start of array
+	int rowPartitions[numWorkers];
+	rowPartitions[0] = 0;
 
-	for (int i = 1; i <= m1Rows; i++) {
-		currentRow = matrix1[i].row;
-		if (i % averageRow == 0) {
-			offsetRowValue[counter] = currentRow;
-			counter++;
+	//populate this array with the partition boundaries dictated by number of rows
+	int partition = averageRow;
+	for(int i = 1; i < numWorkers; i++) {
+		rowPartitions[i] = partition;
+		partition += averageRow;
+	}
+
+	//for each element in the array
+	for(int i = 0; i < numWorkers; i++) {
+
+		int curRow = matrix1[i].row;
+		int nextRow = matrix1[i+1].row;
+		int nextRowIndex = i + 1;
+
+		//"peek" ahead
+		if(nextRowIndex == numWorkers) {
+			continue;
 		}
-	}
+		else{
+			//if the integer after doesn't change
+			if(curRow == nextRow) {
+				continue;
+			}
+			//if the integer after DOES change
+			else {
 
-	counter = 0;
-	for (int i = 0; i < m1Rows; i++) {
-		currentRow = matrix1[i].row;
-		if (currentRow <= offsetRowValue[counter]) {
-			offsetRow[counter] = i;
-		} else {
-			counter++;
-			offsetRow[counter+1] = i;
+				//loop through and increment the indexes indicating the edited number of partition boundaries
+				while(curRow == matrix1[nextRowIndex].row) {
+					rowPartitions[i] = rowPartitions[i] + 1;
+				}
+
+				//update the next boundaries
+			}
+
 		}
+
+	}	
+
+	for(int k = 0; k < numWorkers; k++) {
+		printf(" %d \n", rowPartitions[k]);
 	}
 
-	
-	counter = 0;
-	for (int i = 0; i < m2Rows; i++) {
-		currentCol = matrix2[i].col;
-		if (currentCol <= offsetRowValue[counter]) {
-			offsetCol[counter] = i;
-		} else {
-			counter++;
-			offsetCol[counter+1] = i;
-		}
-	}
-
-
-	
-	// Print offset values
-	for (int i = 0; i < numWorkers; i++) {
-		printf("Offset row = %d\n", offsetRow[i]);
-	}
-	for (int i = 0; i < numWorkers; i++) {
-		printf("Offset col = %d\n", offsetCol[i]);
-	}
-	
 
 }
 
@@ -262,10 +268,10 @@ void main(int argc, char *argv[])
 	fileToMatrix(fp1, matrix1);
 	fileToMatrix(fp2, matrix2);	
 
-	//splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
+	splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
 
-	struct SparseRow *result = NULL;
-	sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
+	//struct SparseRow *result = NULL;
+	//sequentialMultiply(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, &result);
 
 	//free any pointers which have used malloc
 	free(sortM1);
