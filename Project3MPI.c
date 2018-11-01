@@ -4,6 +4,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h> //cwd
+#include <omp.h>
+#include <time.h>
+#include<sys/time.h>
+
 
 
 #define MASTER 0 /* taskid of first task */
@@ -147,8 +151,184 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 		printf(" %d %d %d \n", (*result)[i].row,(*result)[i].col, (int)(*result)[i].val);
 	}
 	*/
+	return resultNonZeroEntries;
+}
+
+int matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow *result) {
+	
+	#define thisThread omp_get_thread_num()
+	#define nThreads omp_get_num_threads()
+
+	// Shared variables
+	int totalNonZero = 0;
+	int *copyIndex;
+	int *threadNonZero;
+
+	#pragma omp parallel
+	{
+		// Each thread now initialize a local buffer and local variables 
+		int localNonZero = 0;
+		int allocatedSize = 1024;
+		struct SparseRow *localResult;
+		localResult = malloc(allocatedSize  * sizeof(struct SparseRow));
+		int i,j;
+
+		// one thread initialize an array
+		#pragma omp single
+		{
+			threadNonZero=malloc(nThreads*sizeof(int));
+			copyIndex=malloc((nThreads+1)*sizeof(int));
+		}
+
+		/* 
+	    realloc an extra 1024 lines each time localNonZeros exceeds allocatedSize
+	    fill the local buffer and increment the localNonZeros counter
+	    no need to use critical / atomic clauses
+		*/
+
+		#pragma omp for 
+		for (i = 0; i < m1Rows; i++){
+
+			int curM1Col = matrix1[i].col;			
+			for(j = 0; j < m2Rows; j++)
+			{
+				int curM2Row = matrix2[j].row;
+				
+				if(curM1Col == curM2Row)
+				{
+
+					if (localNonZero >= allocatedSize) {
+						allocatedSize += 1024;
+						localResult = realloc(localResult,
+						(sizeof(struct SparseRow)*(allocatedSize)));
+					}
+
+					int curM1Row = matrix1[i].row;
+					float curM1Value = matrix1[i].val;
+					int curM2Col = matrix2[j].col;
+					float curM2Value = matrix2[j].val;
+
+					localResult[localNonZero].row = curM1Row;
+					localResult[localNonZero].col = curM2Col;
+					localResult[localNonZero].val += curM1Value*curM2Value;
+					//printf("%d %d %f\n", localResult[localNonZero].row, localResult[localNonZero].col, localResult[localNonZero].val);
+
+					localNonZero++;
+				}
+			}
+		}
+
+		// Put number of non zeri results into a shared result 
+		threadNonZero[thisThread] = localNonZero; 
+		#pragma omp barrier
+
+		// Check how many non zero values for each thread, allocate the output and check where each thread will copy its local buffer
+		#pragma omp single
+		{
+		    copyIndex[0]=0;
+		    for (i=0; i<nThreads; i++) {
+		        copyIndex[i+1]=threadNonZero[i]+copyIndex[i];
+		        //printf("Index %d = %d\n", i+1, copyIndex[i+1]);
+		        totalNonZero += threadNonZero[i];
+		    }
+
+		   // result = malloc(totalNonZero * sizeof(struct SparseRow));
+			result = realloc(result, totalNonZero * sizeof(struct SparseRow));
+		}
+		#pragma omp barrier
+		
+		//printf("Thread %d : localNonZero = %d\n", thisThread, localNonZero);
+
+		// Copy the results from local to global result
+		//memcpy(&result[copyIndex[thisThread]],localResult, localNonZero * sizeof(struct SparseRow));
+
+		
+		int counter = 0;
+		int index = copyIndex[thisThread];
+		
+		for (i = index; i < index+localNonZero; i++) {
+			//printf("i = %d\n", i);
+			result[i].row = localResult[counter].row;
+			//printf("%d\n", localResult[counter].row);
+			result[i].col = localResult[counter].col;
+			result[i].val = localResult[counter].val;
+			counter++;
+		}
+		
+		
+
+		// Free memory
+		free(localResult);
+
+		#pragma omp single
+		{
+			free(copyIndex);
+		}
+
+	}
 	
 	
+	int i;
+	printf("-----------------------------------------\n");
+	for(i = 0; i <nThreads; i++) 
+	{
+		printf("%d \n", threadNonZero[i]);
+	}
+
+	for (i = 0; i < totalNonZero; i++) {
+		printf("%d %d %f\n", (result[i]).row, (result[i]).col, (result[i]).val);
+	}
+	printf("We get here...\n");
+	printf("totalNonZero: %d\n", totalNonZero);
+	printf("\n\n");
+
+	return totalNonZero;
+}
+
+int matrixMultiply2(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
+
+	(*result[0]).row = 0;
+	(*result[0]).col = 0;
+	(*result[0]).val = 0;
+	int resultNonZeroEntries = 0;
+
+	#pragma omp parallel
+	{
+		int i, j;
+		#pragma omp for
+		for(i = 0; i < m1Rows; i++)
+		{
+			int curM1Row = matrix1[i].row;
+			int curM1Col = matrix1[i].col;
+			float curM1Value = matrix1[i].val;
+
+			for(j = 0; j < m2Rows; j++)
+			{
+				int curM2Row = matrix2[j].row;
+				int curM2Col = matrix2[j].col;
+				float curM2Value = matrix2[j].val;
+
+				if(curM1Col == curM2Row)
+				{
+					if(resultNonZeroEntries!= 0)
+					{
+						*result = realloc(*result, (sizeof(struct SparseRow)*(resultNonZeroEntries+1)));
+						(*result)[resultNonZeroEntries].val = 0;
+					}
+
+					(*result)[resultNonZeroEntries].row = curM1Row;
+					(*result)[resultNonZeroEntries].col = curM2Col;
+					(*result)[resultNonZeroEntries].val = (*result)[resultNonZeroEntries].val + curM1Value*curM2Value;
+
+					resultNonZeroEntries++;
+
+					break;
+				}
+
+			}
+		}
+	}
+
 	return resultNonZeroEntries;
 }
 
@@ -210,6 +390,7 @@ void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1N
 int main (int argc, char *argv[]) {
 
 	//ASSUMPTION : the number of unique numbered rows is greater then the number of workers
+	//https://stackoverflow.com/questions/5298739/mpi-global-execution-time
 
 	int i, j,//loop index
 	numWorkers, // records the number of workers in the environment
@@ -225,9 +406,12 @@ int main (int argc, char *argv[]) {
 	MPI_Status status; //will represent the status of any message
 
 	//initialise a MPI "session"
-	MPI_Init(&argc,&argv);
+	int provided;
+	MPI_Init_thread(&argc,&argv, MPI_THREAD_FUNNELED, &provided);
+	//MPI_Init(&argc, &argv);
 	MPI_Comm_rank(MPI_COMM_WORLD,&taskid); 
 	MPI_Comm_size(MPI_COMM_WORLD,&numtasks);
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	if (numtasks < 2 ) {
 		printf("Need at least two MPI tasks. Quitting...\n");
@@ -317,7 +501,7 @@ int main (int argc, char *argv[]) {
 
 		// plit matrix1 by rows and matrix2 by corresponding cols
 		splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries, numWorkers);
-		
+
 		//sending data to worker nodes
 		mtype = FROM_MASTER;
 		for(dest = 1; dest <= numWorkers; dest++)
@@ -351,8 +535,8 @@ int main (int argc, char *argv[]) {
 				partitionRowIndex = offsetRowArray[j];
 				partitionColIndex = offsetColArray[j];
 			}
+			
 
-					
 			//DEBUGGING 
 			printf("----------------------------------\n");
 			printf("SENDING TO WORKER : %d\n", dest);
@@ -387,17 +571,20 @@ int main (int argc, char *argv[]) {
 			int resultRows = 0;
 			MPI_Recv(&resultRows, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
 
+
 			struct SparseRow result[resultRows];
 			MPI_Recv(&result, resultRows, mpi_struct, source, mtype, MPI_COMM_WORLD, &status);
 
+			
 			printf("----------------------------------\n");
 			printf("FROM WORKER : %d\n", i);
+			printf("NUMBER OF ROWS : %d\n", resultRows);
 			for(j = 0; j < resultRows; j++) {
 				printf("%d %d %f \n", result[j].row, result[j].col, result[j].val);
 			}
+			
 
 		}
-
 	} 
 
 	if (taskid > MASTER)
@@ -415,7 +602,7 @@ int main (int argc, char *argv[]) {
 		MPI_Recv(&matrix1Part, sizeOfPartitionRow, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
 		MPI_Recv(&matrix2Part, sizeOfPartitionCol, mpi_struct, MASTER, mtype, MPI_COMM_WORLD, &status);
 
-		/*		
+		/*	
 		printf("----------------------------------\n");
 		printf("%d => RECIEVED FROM MASTER : \n", taskid);
 		printf("%d=> ROW COMPONENT : \n", taskid);
@@ -429,16 +616,24 @@ int main (int argc, char *argv[]) {
 		*/
 		
 		int resultRows = 0;
-		struct SparseRow *result = malloc(1 * sizeof(struct SparseRow));
+		
+		
+		struct SparseRow *result = malloc(1 * sizeof(struct SparseRow));		
+		(result[0]).row = 0;
+		(result[0]).col = 0;
+		(result[0]).val = 0;
 		resultRows = sequentialMultiply(matrix1Part, matrix2Part, sizeOfPartitionRow, sizeOfPartitionCol, &result);
 
-		/*		
+		//resultRows = matrixMultiply(matrix1Part, matrix2Part, sizeOfPartitionRow, sizeOfPartitionCol, result);
+		/*
+		printf("----------------------------------------------");
 		printf("RESULT ROWS\n");
 		for(i = 0; i < resultRows; i++) {
 			printf("%d => %d %d %f \n", taskid, result[i].row, result[i].col, result[i].val);
 		}
+		printf("\n\n");
 		*/
-		
+
 		mtype = FROM_WORKER;
 		MPI_Send(&resultRows, 1, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
 		MPI_Send(&result[0], resultRows, mpi_struct, MASTER, mtype, MPI_COMM_WORLD);
@@ -446,5 +641,11 @@ int main (int argc, char *argv[]) {
 		
 	}
 
+
+
 	MPI_Finalize();
+
+
+	
+	
 }
