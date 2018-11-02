@@ -15,6 +15,8 @@
 	2. syncCluster
 	3. mpirun Project3MPI big2.mtx big2.mtx
 
+	Comments are kept for debugging purposes - will show a sequential list of messages on stdout when uncommented
+
 **/
 
 #define MASTER 0 /* taskid of first task */
@@ -90,9 +92,7 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix) {
 */
 int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
 
-	//*result = malloc(1 * sizeof(struct SparseRow));
 	/*
-	int k;
 	printf("--------------------------------\n");
 	printf("IN SEQUENTIAL MUTIPLY \n");
 	printf("MATRIX 1 : \n");
@@ -126,7 +126,6 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 			int curM2Col = matrix2[j].col;
 			float curM2Value = matrix2[j].val;
 
-			//if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			if(curM1Col == curM2Row)
 			{
 				if(resultNonZeroEntries!= 0)
@@ -135,14 +134,9 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 					(*result)[resultNonZeroEntries].val = 0;
 				}
 
-				//printf("ADDING : %d %d %f \n", curM1Row, curM2Col, curM1Value*curM2Value);
-				//printf("VAL = %f\n", (*result)[resultNonZeroEntries].val);
-
 				(*result)[resultNonZeroEntries].row = curM1Row;
 				(*result)[resultNonZeroEntries].col = curM2Col;
 				(*result)[resultNonZeroEntries].val = (*result)[resultNonZeroEntries].val + curM1Value*curM2Value;
-				
-				//printf("ADDING : %d %d %f \n", (*result)[resultNonZeroEntries].row, (*result)[resultNonZeroEntries].col, (*result)[resultNonZeroEntries].val);
 
 				resultNonZeroEntries++;
 
@@ -152,15 +146,14 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 		}
 	}
 	
-	/*
-	printf("NON ZERO ENTRIES FOR RESULT %d \n", resultNonZeroEntries);
-	for(i = 0; i < resultNonZeroEntries; i++) {
-		printf(" %d %d %d \n", (*result)[i].row,(*result)[i].col, (int)(*result)[i].val);
-	}
-	*/
 	return resultNonZeroEntries;
 }
 
+
+/*
+	This algorithm showed a 50% speedup when used on local computers with a single worker..(e.g. on our computers)
+	Didn't work on cluster
+*/
 int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow *result) {
 	
 	#define thisThread omp_get_thread_num()
@@ -293,6 +286,10 @@ int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, i
 	return totalNonZero;
 }
 
+
+/*
+	Parallelised version of sequential multiply
+*/
 int matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow *result) {
 
 	
@@ -318,13 +315,6 @@ int matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1R
 
 				if(curM1Col == curM2Row)
 				{	
-
-					//if(resultNonZeroEntries!= 0)
-					//{
-					//*result = realloc(*result, (sizeof(struct SparseRow)*(resultNonZeroEntries+1)));
-					//(*result)[resultNonZeroEntries].val = 0;	
-					//}
-
 					int curM2Col = matrix2[j].col;
 					int curM1Row = matrix1[i].row;
 					float curM2Value = matrix2[j].val;
@@ -559,7 +549,6 @@ int main (int argc, char *argv[]) {
 			}
 			
 			/*
-			//DEBUGGING 
 			printf("----------------------------------\n");
 			printf("SENDING TO WORKER : %d\n", dest);
 			printf("Size Of Partition Row : %d\n", sizeOfPartitionRow);
