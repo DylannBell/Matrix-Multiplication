@@ -15,6 +15,9 @@
 	2. syncCluster
 	3. mpirun Project3MPI big2.mtx big2.mtx
 
+	Ryan Hodgson 21969062
+	Dylan Bell 21711951 
+
 **/
 
 #define MASTER 0 /* taskid of first task */
@@ -606,6 +609,12 @@ int main (int argc, char *argv[]) {
 				printf("%d %d %f \n", result[j].row, result[j].col, result[j].val);
 			}
 			*/
+
+
+			//PRINT OFF RESULT TO STDOUT..
+			for(j = 0; j < resultRows; j++) {
+				printf("%d %d %f \n", result[j].row, result[j].col, result[j].val);
+			}
 			
 		}
 
