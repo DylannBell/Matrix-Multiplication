@@ -13,10 +13,7 @@
 	RUN [WINDOWS] : Project3 test1.mtx test1.mtx
 */
 
-
 // Global variables
-
-
 int* offsetRowArray;
 int* offsetColArray;
 
@@ -77,7 +74,10 @@ void fileToMatrix(FILE *fp, struct SparseRow *matrix)
 
 }
 
-
+/*
+	Splits the matricies into partitions where each partition will be extended until the next number it encounters
+	is different to the previous number it added
+*/
 void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1NonZeroEntries, int m2NonZeroEntries) {
 
 	int numWorkers = 11;
@@ -127,40 +127,12 @@ void splitMatrices(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1N
 		}
 	}
 
-	/*
-	for (i = 0; i < numWorkers; i++) {
-		printf("Offset Row[%d] = %d\n", i, offsetRowArray[i]);
-		printf("Offset Col[%d] = %d\n", i, offsetColArray[i]);
-		printf("Value[%d] = %d\n", i, offsetValue[i]);
-	}
-	*/
-
 }
 
-
-
 /*
-	matrix1 - 
-	matrix2 - 	
+	Sequentially multiplies two matricies together
 */
 void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
-	
-	/*
-	printf("MATRIX 1 \n");
-	for(int i = 0; i < m1Rows; i++)
-	{
-		printf("%i %i %f \n", matrix1[i].row, matrix1[i].col, matrix1[i].val);
-	}
-	printf("\n");
-	
-	printf("MATRIX 2 \n");
-	for(int i = 0; i < m2Rows; i++)
-	{
-		printf("%i %i %f \n", matrix2[i].row, matrix2[i].col, matrix2[i].val);
-	}
-	printf("\n");
-	*/
-	
 
 	*result = malloc(1 * sizeof(struct SparseRow));
 
@@ -178,7 +150,6 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 			int curM2Col = matrix2[j].col;
 			float curM2Value = matrix2[j].val;
 
-			//if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			if(curM1Col == curM2Row)
 			{
 
@@ -195,96 +166,11 @@ void sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, in
 
 		}
 	}
-
-	/*
-	printf("RESULT MATRIX\n");
-	for (int i = 0; i < resultNonZeroEntries; i++)
-	{
-		printf("%d ", (*result)[i].row);
-		printf("%d ", (*result)[i].col);
-		printf("%f ", (*result)[i].val);
-		printf("\n");
-	}
-	*/
-
 }
 
-void pMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows) {
-	
-	//*result = malloc(1 * sizeof(struct SparseRow));
-	struct timeval start1, end1;
-
-	#define thisThread omp_get_thread_num()
-	#define nThreads omp_get_num_threads()
-
-	/*
-	int N = 2000;
-
-	float **result = (float**)malloc(N * sizeof(float *));
-
-	for(int i = 0; i < N; i++) {
-		result[i] = (float *)malloc(N * sizeof(float));
-
-		for(int j = 0; j < N; j++) {
-			result[i][j] = 0.0;
-		}
-	}
-	*/
-
-	gettimeofday(&start1, NULL);
-
-	#pragma omp parallel
-	{
-		int N = 2000;
-
-		float **localResult = (float**)malloc(N * sizeof(float *));
-		//#pragma omp for
-		for(int i = 0; i < N; i++) {
-			localResult[i] = (float *)malloc(N * sizeof(float));
-		}
-
-		int curM1Row;
-		int curM1Col;
-		float curM1Value;
-		int curM2Row;
-		int curM2Col;
-		float curM2Value;
-
-		#pragma omp parallel for private(curM1Row, curM1Col, curM1Value, curM2Row, curM2Col, curM2Value)
-		
-		for(int i = 0; i < m1Rows; i++) 
-		{
-			curM1Col = matrix1[i].col;
-
-			for(int j = 0; j < m2Rows; j++)
-			{
-				curM2Row = matrix2[j].row;
-
-				if(curM1Col == curM2Row)
-				{
-					curM1Value = matrix1[i].val;
-					curM1Row = matrix1[i].row;
-					curM2Col = matrix2[j].col;
-					curM2Value = matrix2[j].val;
-					localResult[curM1Row][curM2Col] += curM1Value*curM2Value;
-					
-				}
-			}
-
-		}
-
-	}
-
-	gettimeofday(&end1, NULL);
-
-
-	float parallel_time_2 = ((end1.tv_sec  - start1.tv_sec) * 1000000u +
-    end1.tv_usec - start1.tv_usec) / 1.e6;
-
-    printf("P0 Time = %12.7f\n", parallel_time_2);
-
-}
-
+/*
+	Multiplies two matricies together - uses openMP to gain performance
+*/
 void matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow **result) {
 	
 	#define thisThread omp_get_thread_num()
@@ -315,7 +201,6 @@ void matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1
 	    fill the local buffer and increment the localNonZeros counter
 	    no need to use critical / atomic clauses
 		*/
-
 		#pragma omp for 
 		for (int i = 0; i < m1Rows; i++){
 
@@ -342,12 +227,11 @@ void matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1
 					localResult[localNonZero].row = curM1Row;
 					localResult[localNonZero].col = curM2Col;
 					localResult[localNonZero].val += curM1Value*curM2Value;
-					//printf("%d %d %f\n", localResult[localNonZero].row, localResult[localNonZero].col, localResult[localNonZero].val);
-
 					localNonZero++;
 				}
 			}
 		}
+
 		// Put number of non zeri results into a shared result 
 		threadNonZero[thisThread] = localNonZero; 
 		#pragma omp barrier
@@ -365,8 +249,6 @@ void matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1
 		    result = malloc( totalNonZero * sizeof(struct SparseRow) );
 		}
 		
-		//printf("Thread %d : localNonZero = %d\n", thisThread, localNonZero);
-
 		// Copy the results from local to global result
 		memcpy(&result[copyIndex[thisThread]],localResult, localNonZero * sizeof(struct SparseRow));
 		
@@ -431,9 +313,6 @@ void main(int argc, char *argv[])
 
 	splitMatrices(matrix1, matrix2, m1NonZeroEntries, m2NonZeroEntries);
 
-
-
-
 	struct SparseRow *result;
 
 	// TIME FUNCTION
@@ -475,16 +354,4 @@ void main(int argc, char *argv[])
 	//close both files
 	fclose(fp1);
 	fclose(fp2);
-
-	//https://www.geeksforgeeks.org/operations-sparse-matrices/
-	//https://people.eecs.berkeley.edu/~aydin/spgemm_sisc12.pdf
-	//http://mathforum.org/library/drmath/view/51903.html
-	//https://toshitha.github.io/Parallel-Project/index.html
-	
-	//https://medium.com/tech-vision/parallel-matrix-multiplication-c-parallel-processing-5e3aadb36f27
-	//https://github.com/Shafaet/OpenMP-Examples/blob/master/Parallel%20Matrix%20Multiplication.cpp
-	//https://stackoverflow.com/questions/22634121/openmp-c-matrix-multiplication-run-slower-in-parallel
-
-
-
 }

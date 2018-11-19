@@ -129,7 +129,6 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 			int curM2Col = matrix2[j].col;
 			float curM2Value = matrix2[j].val;
 
-			//if((curM1Row == curM2Col) && (curM1Col == curM2Row))
 			if(curM1Col == curM2Row)
 			{
 				if(resultNonZeroEntries!= 0)
@@ -138,15 +137,10 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 					(*result)[resultNonZeroEntries].val = 0;
 				}
 
-				//printf("ADDING : %d %d %f \n", curM1Row, curM2Col, curM1Value*curM2Value);
-				//printf("VAL = %f\n", (*result)[resultNonZeroEntries].val);
-
 				(*result)[resultNonZeroEntries].row = curM1Row;
 				(*result)[resultNonZeroEntries].col = curM2Col;
 				(*result)[resultNonZeroEntries].val = (*result)[resultNonZeroEntries].val + curM1Value*curM2Value;
 				
-				//printf("ADDING : %d %d %f \n", (*result)[resultNonZeroEntries].row, (*result)[resultNonZeroEntries].col, (*result)[resultNonZeroEntries].val);
-
 				resultNonZeroEntries++;
 
 				break;
@@ -164,6 +158,9 @@ int sequentialMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int
 	return resultNonZeroEntries;
 }
 
+/*
+	For some reason this function worked perfectly fine locally - but as soon as we put it on the cluster it broke...
+*/
 int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow *result) {
 	
 	#define thisThread omp_get_thread_num()
@@ -195,7 +192,6 @@ int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, i
 	    fill the local buffer and increment the localNonZeros counter
 	    no need to use critical / atomic clauses
 		*/
-
 		#pragma omp for 
 		for (i = 0; i < m1Rows; i++){
 
@@ -221,8 +217,6 @@ int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, i
 					localResult[localNonZero].row = curM1Row;
 					localResult[localNonZero].col = curM2Col;
 					localResult[localNonZero].val += curM1Value*curM2Value;
-					//printf("%d %d %f\n", localResult[localNonZero].row, localResult[localNonZero].col, localResult[localNonZero].val);
-
 					localNonZero++;
 				}
 			}
@@ -238,34 +232,23 @@ int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, i
 		    copyIndex[0]=0;
 		    for (i=0; i<nThreads; i++) {
 		        copyIndex[i+1]=threadNonZero[i]+copyIndex[i];
-		        //printf("Index %d = %d\n", i+1, copyIndex[i+1]);
 		        totalNonZero += threadNonZero[i];
 		    }
 
-		   // result = malloc(totalNonZero * sizeof(struct SparseRow));
 			result = realloc(result, totalNonZero * sizeof(struct SparseRow));
 		}
 		#pragma omp barrier
-		
-		//printf("Thread %d : localNonZero = %d\n", thisThread, localNonZero);
-
 		// Copy the results from local to global result
-		//memcpy(&result[copyIndex[thisThread]],localResult, localNonZero * sizeof(struct SparseRow));
-
 		
 		int counter = 0;
 		int index = copyIndex[thisThread];
 		
 		for (i = index; i < index+localNonZero; i++) {
-			//printf("i = %d\n", i);
 			result[i].row = localResult[counter].row;
-			//printf("%d\n", localResult[counter].row);
 			result[i].col = localResult[counter].col;
 			result[i].val = localResult[counter].val;
 			counter++;
 		}
-		
-		
 
 		// Free memory
 		free(localResult);
@@ -296,6 +279,9 @@ int matrixMultiplyBroken(struct SparseRow *matrix1, struct SparseRow *matrix2, i
 	return totalNonZero;
 }
 
+/*
+	Multiplies two matricies and increases performance by employing the use of OpenMP
+*/
 int matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1Rows, int m2Rows, struct SparseRow *result) {
 
 	
@@ -321,12 +307,6 @@ int matrixMultiply(struct SparseRow *matrix1, struct SparseRow *matrix2, int m1R
 
 				if(curM1Col == curM2Row)
 				{	
-
-					//if(resultNonZeroEntries!= 0)
-					//{
-					//*result = realloc(*result, (sizeof(struct SparseRow)*(resultNonZeroEntries+1)));
-					//(*result)[resultNonZeroEntries].val = 0;	
-					//}
 
 					int curM2Col = matrix2[j].col;
 					int curM1Row = matrix1[i].row;
@@ -459,8 +439,6 @@ int main (int argc, char *argv[]) {
 	//if we are at the MASTER node
 	if (taskid == MASTER)
 	{
-
-		//start = MPI_Wtime();
 
 		//if the number of arguments is less than 3 - throw an error
 		if(argc < 3)
@@ -679,7 +657,4 @@ int main (int argc, char *argv[]) {
 
 	MPI_Finalize();
 
-
-	
-	
 }
